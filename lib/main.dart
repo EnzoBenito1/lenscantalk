@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'palavra_service.dart';
-import 'palavra.dart';
+import 'screens/historico_screen.dart';
+import 'screens/cadastro_palavra_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,100 +22,58 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const HomePage(),
+      home: const MenuScreen(),
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final service = PalavraService();
-  List<Palavra> palavras = [];
-
-  final nomeController = TextEditingController();
-  final traducaoController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    carregarPalavras();
-  }
-
-  Future<void> carregarPalavras() async {
-    final lista = await service.buscarPalavras();
-    setState(() {
-      palavras = lista;
-    });
-  }
-
-  Future<void> adicionarPalavra() async {
-    if (nomeController.text.isEmpty || traducaoController.text.isEmpty) return;
-
-    final nova = Palavra(
-      id: '',
-      nome: nomeController.text,
-      traducao: traducaoController.text,
-      data: DateTime.now(),
-    );
-
-    await service.salvarPalavra(nova);
-    nomeController.clear();
-    traducaoController.clear();
-    carregarPalavras();
-  }
-
-  Future<void> deletar(String id) async {
-    await service.deletarPalavra(id);
-    carregarPalavras();
-  }
+class MenuScreen extends StatelessWidget {
+  const MenuScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LensCanTalk - Histórico'),
+        title: const Text('LensCanTalk - Menu'),
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(
-              controller: nomeController,
-              decoration: const InputDecoration(labelText: 'Nome (PT)'),
-            ),
-            TextField(
-              controller: traducaoController,
-              decoration: const InputDecoration(labelText: 'Tradução (EN)'),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: adicionarPalavra,
-              child: const Text('Salvar Palavra'),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.translate),
+              label: const Text('Cadastro de Palavras'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const CadastroPalavraScreen()),
+                );
+              },
             ),
             const SizedBox(height: 16),
-            const Text('Histórico', style: TextStyle(fontSize: 18)),
-            Expanded(
-              child: ListView.builder(
-                itemCount: palavras.length,
-                itemBuilder: (context, index) {
-                  final p = palavras[index];
-                  return ListTile(
-                    title: Text('${p.nome} → ${p.traducao}'),
-                    subtitle:
-                        Text('Data: ${p.data.day}/${p.data.month}/${p.data.year}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => deletar(p.id),
-                    ),
-                  );
-                },
-              ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.history),
+              label: const Text('Ver Histórico'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const HistoricoScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.settings),
+              label: const Text('Configurações'),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Funcionalidade em desenvolvimento.')),
+                );
+              },
             ),
           ],
         ),
