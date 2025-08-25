@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'screens/historico_screen.dart';
 import 'screens/cadastro_palavra_screen.dart';
 import 'screens/mlkit_screen.dart';
+import 'screens/configuracoes_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -221,7 +222,7 @@ class _MenuScreenState extends State<MenuScreen>
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const MLKitScreen()),
+                            MaterialPageRoute(builder: (context) => MLKitScreen()),
                           );
                         },
                       ),
@@ -234,7 +235,25 @@ class _MenuScreenState extends State<MenuScreen>
                         emoji: '⚙️',
                         label: 'Configurações',
                         description: 'Personalize seu app!',
-                        colors: [const Color(0xFFD299C2), const Color(0xFFFEF9D7)],
+                        colors: [const Color.fromARGB(62, 90, 92, 88), const Color.fromARGB(255, 90, 130, 175)],
+                        delay: 800,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ConfiguracoesScreen()),
+                          );
+                        },
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      _buildAnimatedButton(
+                        context: context,
+                        icon: Icons.warning,
+                        emoji: '⚠',
+                        label: 'Recursos em Desenvolvimento',
+                        description: 'Função em desenvolvimento!',
+                        colors: [const Color.fromARGB(255, 247, 164, 10), const Color(0xFFFEF9D7)],
                         delay: 800,
                         onPressed: () {
                           _showFunSnackBar(context);
@@ -251,7 +270,7 @@ class _MenuScreenState extends State<MenuScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildBouncingEmoji('🎉', 0),
+                    _buildBouncingEmoji('', 0),
                     const SizedBox(width: 10),
                     const Text(
                       'Divirta-se aprendendo!',
@@ -262,7 +281,7 @@ class _MenuScreenState extends State<MenuScreen>
                       ),
                     ),
                     const SizedBox(width: 10),
-                    _buildBouncingEmoji('🚀', 500),
+                    _buildBouncingEmoji('', 500),
                   ],
                 ),
               ),

@@ -1,192 +1,127 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:google_mlkit_object_detection/google_mlkit_object_detection.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class MLKitScreen extends StatefulWidget {
-  const MLKitScreen({super.key});
-
   @override
-  State<MLKitScreen> createState() => _MLKitScreenState();
+  _MLKitScreenState createState() => _MLKitScreenState();
 }
 
 class _MLKitScreenState extends State<MLKitScreen> {
-  late CameraController cameraController;
-  late FlutterTts tts;
-  bool isCameraInitialized = false;
+  final ImagePicker _picker = ImagePicker();
+  ImageLabeler? _imageLabeler;
+  OnDeviceTranslator? _translator;
+  FlutterTts flutterTts = FlutterTts();
 
-  final List<String> objetosConhecidos = [
-    'Person (Pessoa)',
-    'Dog (Cachorro)',
-    'Cat (Gato)',
-    'Chair (Cadeira)',
-    'Ball (Bola)',
-    'Car (Carro)',
-  ];
+  String _labelText = "Nenhuma imagem selecionada";
+  String _translatedText = "";
+  File? _imageFile;
 
   @override
   void initState() {
     super.initState();
-    initCamera();
-    tts = FlutterTts();
-  }
+    final options = ImageLabelerOptions(confidenceThreshold: 0.6);
+    _imageLabeler = ImageLabeler(options: options);
 
-  Future<void> initCamera() async {
-    final cameras = await availableCameras();
-    final backCamera = cameras.firstWhere(
-      (camera) => camera.lensDirection == CameraLensDirection.back,
-      orElse: () => cameras.first,
+    // Tradutor Inglês -> Português
+    _translator = OnDeviceTranslator(
+      sourceLanguage: TranslateLanguage.english,
+      targetLanguage: TranslateLanguage.portuguese,
     );
-    cameraController = CameraController(backCamera, ResolutionPreset.medium);
-    await cameraController.initialize();
-    setState(() {
-      isCameraInitialized = true;
-    });
   }
 
   @override
   void dispose() {
-    cameraController.dispose();
-    tts.stop();
+    _imageLabeler?.close();
+    _translator?.close();
     super.dispose();
   }
 
-  Future<void> processImage() async {
-    final picture = await cameraController.takePicture();
-    final InputImage inputImage = InputImage.fromFile(File(picture.path));
+  Future<void> _getImageAndDetect() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
 
-    final options = ObjectDetectorOptions(
-      mode: DetectionMode.single,
-      classifyObjects: true,
-      multipleObjects: true,
-    );
-    final objectDetector = ObjectDetector(options: options);
+    if (pickedFile == null) return;
 
-    final detectedObjects = await objectDetector.processImage(inputImage);
+    setState(() {
+      _imageFile = File(pickedFile.path);
+      _labelText = "Detectando...";
+      _translatedText = "";
+    });
 
-    if (detectedObjects.isEmpty) {
-      if (!mounted) return;
+    final inputImage = InputImage.fromFile(_imageFile!);
+    final labels = await _imageLabeler!.processImage(inputImage);
 
-      await tts.speak("Hmm, eu não consegui ver nada desta vez. Tente chegar mais perto ou mudar de ângulo!");
-
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Nada reconhecido 🤔'),
-          content: const Text(
-            'Eu não consegui reconhecer nenhum objeto desta vez.\n\nTente apontar para outros objetos:\n- Uma pessoa\n- Um cachorro\n- Uma cadeira\n- Uma bola\n- Um carro\n\nDica: fique em um lugar bem iluminado e mantenha o objeto no centro da tela!',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            )
-          ],
-        ),
-      );
-
+    if (labels.isEmpty) {
+      setState(() {
+        _labelText = "Nada reconhecido. Tente outro ângulo!";
+        _translatedText = "";
+      });
       return;
     }
 
+    String detected = labels.first.label;
 
-    List<String> labels = [];
-    for (var obj in detectedObjects) {
-      for (var label in obj.labels) {
-        labels.add(label.text);
-      }
+    // ✅ Ajuste para óculos
+    if (detected.toLowerCase().contains("glass") ||
+        detected.toLowerCase().contains("eyewear") ||
+        detected.toLowerCase().contains("fashion")) {
+      detected = "Glasses";
     }
 
-    if (!mounted) return;
+    // Tradução
+    final translated = await _translator!.translateText(detected);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Detectado: ${labels.join(", ")}')),
-    );
+    setState(() {
+      _labelText = "Reconhecido: $detected";
+      _translatedText = "Tradução: $translated";
+    });
 
-    await translateAndSpeak(labels);
-  }
-
-  Future<void> translateAndSpeak(List<String> texts) async {
-    final translator = OnDeviceTranslator(
-      sourceLanguage: TranslateLanguage.english,
-      targetLanguage: TranslateLanguage.portuguese,
-    );
-
-    List<String> results = [];
-    for (var text in texts) {
-      final translatedText = await translator.translateText(text);
-      results.add('$text: $translatedText');
-    }
-
-    if (!mounted) return;
-
-    final translatedOnly =
-        results.map((e) => e.split(': ').last).join(", ");
-    await tts.speak("Eu vejo: $translatedOnly");
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Objetos Detectados'),
-        content: Text(results.join('\n')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          )
-        ],
-      ),
-    );
+    // Falar o texto traduzido
+    await flutterTts.setLanguage("pt-BR");
+    await flutterTts.setSpeechRate(0.9);
+    await flutterTts.speak("Isso é um $translated");
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isCameraInitialized) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ML Kit - LensCanTalk'),
-        backgroundColor: Colors.lightBlue,
+        title: Text("Detector Educativo"),
+        backgroundColor: Colors.blue,
       ),
-      body: Column(
-        children: [
-          AspectRatio(
-            aspectRatio: cameraController.value.aspectRatio,
-            child: CameraPreview(cameraController),
-          ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                const Text(
-                  'Eu sei reconhecer:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Wrap(
-                  spacing: 8,
-                  children: objetosConhecidos
-                      .map((obj) => Chip(label: Text(obj)))
-                      .toList(),
-                ),
-              ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _imageFile != null
+                ? Image.file(_imageFile!, height: 250)
+                : Icon(Icons.camera_alt, size: 120, color: Colors.grey),
+            SizedBox(height: 20),
+            Text(
+              _labelText,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.search),
-            label: const Text('Detectar e Traduzir'),
-            onPressed: processImage,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.lightBlue,
+            if (_translatedText.isNotEmpty)
+              Text(
+                _translatedText,
+                style: TextStyle(fontSize: 18, color: Colors.green),
+              ),
+            SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _getImageAndDetect,
+              icon: Icon(Icons.camera),
+              label: Text("Abrir Câmera"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                textStyle: TextStyle(fontSize: 18),
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }
