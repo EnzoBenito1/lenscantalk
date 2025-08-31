@@ -23,8 +23,8 @@ class MyApp extends StatelessWidget {
       title: 'LensCanTalk',
       theme: ThemeData(
         primarySwatch: Colors.purple,
-        fontFamily: 'Comic Sans MS', // Fonte mais infantil
-        scaffoldBackgroundColor: const Color(0xFFF0F8FF), // Azul bem claro
+        fontFamily: 'Comic Sans MS',
+        scaffoldBackgroundColor: const Color(0xFFF0F8FF),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -38,7 +38,315 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const MenuScreen(),
+      home: const WelcomeScreen(),
+    );
+  }
+}
+
+// Tela de boas-vindas com fundo azul
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late AnimationController _textController;
+  late AnimationController _buttonController;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoRotation;
+  late Animation<double> _textFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _buttonScale;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Animação do logo
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.bounceOut),
+    );
+    _logoRotation = Tween<double>(begin: 0.0, end: 2.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+    );
+
+    // Animação do texto
+    _textController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
+    );
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
+      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
+    );
+
+    
+    _buttonController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _buttonScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _buttonController, curve: Curves.elasticOut),
+    );
+
+    
+    _startAnimations();
+  }
+
+  void _startAnimations() async {
+    await _logoController.forward();
+    await Future.delayed(const Duration(milliseconds: 300));
+    _textController.forward();
+    await Future.delayed(const Duration(milliseconds: 500));
+    _buttonController.forward();
+  }
+
+  @override
+  void dispose() {
+    _logoController.dispose();
+    _textController.dispose();
+    _buttonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E3C72), // Azul escuro
+              Color(0xFF2A5298), // Azul médio
+              Color(0xFF4A90E2), // Azul claro
+              Color(0xFF87CEEB), // Azul céu
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 2),
+
+                AnimatedBuilder(
+                  animation: _logoController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _logoScale.value,
+                      child: Transform.rotate(
+                        angle: _logoRotation.value,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.visibility,
+                            size: 60,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 40),
+
+                // Título principal animado
+                SlideTransition(
+                  position: _textSlide,
+                  child: FadeTransition(
+                    opacity: _textFade,
+                    child: const Text(
+                      'LensCanTalk',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(
+                            blurRadius: 10,
+                            color: Colors.black26,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                const SizedBox(height: 40),
+
+                // Descrição animada
+                SlideTransition(
+                  position: _textSlide,
+                  child: FadeTransition(
+                    opacity: _textFade,
+                    child: const Text(
+                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚🌍⚙️',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+
+                const Spacer(flex: 2),
+
+                // Botão "Começar" animado
+                ScaleTransition(
+                  scale: _buttonScale,
+                  child: Container(
+                    width: double.infinity,
+                    height: 65,
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) =>
+                                const MenuScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                    begin: const Offset(1.0, 0.0),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            transitionDuration: const Duration(milliseconds: 800),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1E3C72),
+                        elevation: 10,
+                        shadowColor: Colors.black.withOpacity(0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Começar',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E3C72).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Indicadores de funcionalidades
+                FadeTransition(
+                  opacity: _textFade,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildFeatureIcon('✏️', 'Cadastrar'),
+                      _buildFeatureIcon('📚', 'Histórico'),
+                      _buildFeatureIcon('🌍', 'Traduzir'),
+                      _buildFeatureIcon('⚙️', 'Config'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureIcon(String emoji, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            emoji,
+            style: const TextStyle(fontSize: 20),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -87,16 +395,16 @@ class _MenuScreenState extends State<MenuScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF87CEEB), // Sky blue
-              Color(0xFFE0F6FF), // Light blue
-              Color(0xFFFFF8DC), // Cornsilk
+              Color(0xFF1E3C72),
+              Color(0xFF2A5298),
+              Color(0xFF4A90E2),
+              Color(0xFF87CEEB),
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Header com título animado
               Container(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -108,7 +416,7 @@ class _MenuScreenState extends State<MenuScreen>
                             horizontal: 20, vertical: 15),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFFFF6B6B), Color(0xFF4ECDC4)],
+                            colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
                           ),
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
@@ -158,7 +466,7 @@ class _MenuScreenState extends State<MenuScreen>
                       'Vamos aprender juntos!',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Color(0xFF666666),
+                        color: Color.fromARGB(255, 252, 251, 251),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -250,7 +558,7 @@ class _MenuScreenState extends State<MenuScreen>
                       _buildAnimatedButton(
                         context: context,
                         icon: Icons.warning,
-                        emoji: '⚠',
+                        emoji: '⚠️',
                         label: 'Recursos em Desenvolvimento',
                         description: 'Função em desenvolvimento!',
                         colors: [const Color.fromARGB(255, 247, 164, 10), const Color(0xFFFEF9D7)],
@@ -275,7 +583,7 @@ class _MenuScreenState extends State<MenuScreen>
                     const Text(
                       'Divirta-se aprendendo!',
                       style: TextStyle(
-                        color: Color(0xFF666666),
+                        color: Color.fromARGB(255, 248, 247, 247),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),

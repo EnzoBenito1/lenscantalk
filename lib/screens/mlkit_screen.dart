@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class MLKitScreen extends StatefulWidget {
@@ -12,21 +12,31 @@ class MLKitScreen extends StatefulWidget {
 
 class _MLKitScreenState extends State<MLKitScreen> {
   final ImagePicker _picker = ImagePicker();
-  ImageLabeler? _imageLabeler;
-  OnDeviceTranslator? _translator;
-  FlutterTts flutterTts = FlutterTts();
-
-  String _labelText = "Nenhuma imagem selecionada";
-  String _translatedText = "";
+  String _resultText = "Toque no botão e tire uma foto para começar!";
   File? _imageFile;
+  late ImageLabeler _imageLabeler;
+  late OnDeviceTranslator _translator;
+  final FlutterTts _flutterTts = FlutterTts();
+
+  final Map<String, String> objectMap = {
+    "glasses": "Óculos",
+    "chair": "Cadeira",
+    "ball": "Bola",
+    "shirt": "Camiseta",
+    "t-shirt": "Camiseta",
+    "table": "Mesa",
+    "phone": "Celular",
+    "cellphone": "Celular",
+    "sofa": "Sofá",
+    "car": "Carro",
+    "dog": "Cachorro",
+    "cat": "Gato"
+  };
 
   @override
   void initState() {
     super.initState();
-    final options = ImageLabelerOptions(confidenceThreshold: 0.6);
-    _imageLabeler = ImageLabeler(options: options);
-
-    // Tradutor Inglês -> Português
+    _imageLabeler = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.6));
     _translator = OnDeviceTranslator(
       sourceLanguage: TranslateLanguage.english,
       targetLanguage: TranslateLanguage.portuguese,
@@ -35,61 +45,63 @@ class _MLKitScreenState extends State<MLKitScreen> {
 
   @override
   void dispose() {
-    _imageLabeler?.close();
-    _translator?.close();
+    _imageLabeler.close();
+    _translator.close();
     super.dispose();
   }
 
-  Future<void> _getImageAndDetect() async {
+  Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+        _resultText = "Analisando imagem...";
+      });
+      await _processImage(File(pickedFile.path));
+    }
+  }
 
-    if (pickedFile == null) return;
-
-    setState(() {
-      _imageFile = File(pickedFile.path);
-      _labelText = "Detectando...";
-      _translatedText = "";
-    });
-
-    final inputImage = InputImage.fromFile(_imageFile!);
-    final labels = await _imageLabeler!.processImage(inputImage);
+  Future<void> _processImage(File imageFile) async {
+    final inputImage = InputImage.fromFile(imageFile);
+    final labels = await _imageLabeler.processImage(inputImage);
 
     if (labels.isEmpty) {
       setState(() {
-        _labelText = "Nada reconhecido. Tente outro ângulo!";
-        _translatedText = "";
+        _resultText = "Não consegui identificar nada! Tente mostrar outro objeto.";
       });
+      await _flutterTts.speak("Não consegui identificar nada! Tente mostrar outro objeto.");
       return;
     }
 
-    String detected = labels.first.label;
+    String detected = labels.first.label.toLowerCase();
 
-    // ✅ Ajuste para óculos
-    if (detected.toLowerCase().contains("glass") ||
-        detected.toLowerCase().contains("eyewear") ||
-        detected.toLowerCase().contains("fashion")) {
-      detected = "Glasses";
-    }
-
-    // Tradução
-    final translated = await _translator!.translateText(detected);
-
-    setState(() {
-      _labelText = "Reconhecido: $detected";
-      _translatedText = "Tradução: $translated";
+    // Normaliza para objetos comuns
+    objectMap.forEach((key, value) {
+      if (detected.contains(key)) {
+        detected = key;
+      }
     });
 
-    // Falar o texto traduzido
-    await flutterTts.setLanguage("pt-BR");
-    await flutterTts.setSpeechRate(0.9);
-    await flutterTts.speak("Isso é um $translated");
+    String translatedText;
+    if (objectMap.containsKey(detected)) {
+      translatedText = objectMap[detected]!;
+    } else {
+      translatedText = await _translator.translateText(detected);
+    }
+
+    setState(() {
+      _resultText = "Detectado: ${detected.toUpperCase()} → $translatedText";
+    });
+
+    await _flutterTts.speak(translatedText);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blue.shade50,
       appBar: AppBar(
-        title: Text("Detector Educativo"),
+        title: Text("LensCanTalk"),
         backgroundColor: Colors.blue,
       ),
       body: Center(
@@ -97,25 +109,25 @@ class _MLKitScreenState extends State<MLKitScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _imageFile != null
-                ? Image.file(_imageFile!, height: 250)
-                : Icon(Icons.camera_alt, size: 120, color: Colors.grey),
+                ? Image.file(_imageFile!, height: 200)
+                : Icon(Icons.photo_camera, size: 120, color: Colors.blueAccent),
             SizedBox(height: 20),
-            Text(
-              _labelText,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            if (_translatedText.isNotEmpty)
-              Text(
-                _translatedText,
-                style: TextStyle(fontSize: 18, color: Colors.green),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                _resultText,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
               ),
-            SizedBox(height: 20),
+            ),
+            SizedBox(height: 30),
             ElevatedButton.icon(
-              onPressed: _getImageAndDetect,
-              icon: Icon(Icons.camera),
-              label: Text("Abrir Câmera"),
+              onPressed: _pickImage,
+              icon: Icon(Icons.camera_alt),
+              label: Text("Tirar Foto"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 textStyle: TextStyle(fontSize: 18),
               ),
