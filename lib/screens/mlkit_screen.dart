@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+
+enum GameMode { learning, quiz }
 
 class MLKitScreen extends StatefulWidget {
   const MLKitScreen({super.key});
@@ -20,7 +23,19 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
   bool _isProcessing = false;
   String _currentLanguage = 'pt-BR';
   late AnimationController _animationController;
+  late AnimationController _gameAnimationController;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _bounceAnimation;
+
+  // Game variables
+  GameMode _currentMode = GameMode.learning;
+  int _score = 0;
+  int _streak = 0;
+  bool _showingQuizOptions = false;
+  List<ObjectTranslation> _quizOptions = [];
+  ObjectTranslation? _correctAnswer;
+  String _feedbackMessage = '';
+  Color _feedbackColor = Colors.green;
 
   final ImageLabeler _imageLabeler = ImageLabeler(
     options: ImageLabelerOptions(confidenceThreshold: 0.5),
@@ -117,8 +132,15 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+    _gameAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+    _bounceAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _gameAnimationController, curve: Curves.bounceOut),
     );
   }
 
@@ -126,6 +148,18 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
     await flutterTts.setLanguage(_currentLanguage);
     await flutterTts.setPitch(1.0);
     await flutterTts.setSpeechRate(0.5);
+  }
+
+  void _toggleGameMode() {
+    setState(() {
+      _currentMode = _currentMode == GameMode.learning ? GameMode.quiz : GameMode.learning;
+      _showingQuizOptions = false;
+      _feedbackMessage = '';
+      if (_currentMode == GameMode.quiz) {
+        _score = 0;
+        _streak = 0;
+      }
+    });
   }
 
   Future<void> _getImage() async {
@@ -140,6 +174,8 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
           _image = File(pickedFile.path);
           _isProcessing = true;
           _detectedObjects.clear();
+          _showingQuizOptions = false;
+          _feedbackMessage = '';
         });
         await _processImage();
       }
@@ -174,7 +210,12 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
 
       if (detectedObjects.isNotEmpty) {
         _animationController.forward();
-        await _speak(detectedObjects.first.translation.english);
+        
+        if (_currentMode == GameMode.learning) {
+          await _speak(detectedObjects.first.translation.english);
+        } else if (_currentMode == GameMode.quiz) {
+          _setupQuiz(detectedObjects.first.translation);
+        }
       }
     } catch (e) {
       setState(() {
@@ -182,6 +223,69 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
       });
       _showErrorDialog('Erro ao processar imagem: $e');
     }
+  }
+
+  void _setupQuiz(ObjectTranslation correctAnswer) {
+    final random = Random();
+    final allObjects = _objectMap.values.toList();
+    allObjects.shuffle(random);
+    
+    List<ObjectTranslation> options = [correctAnswer];
+    
+    for (var obj in allObjects) {
+      if (obj != correctAnswer && options.length < 4) {
+        options.add(obj);
+      }
+    }
+    
+    options.shuffle(random);
+    
+    setState(() {
+      _correctAnswer = correctAnswer;
+      _quizOptions = options;
+      _showingQuizOptions = true;
+      _feedbackMessage = '';
+    });
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _speakInLanguage("What is this in English?", "en-US");
+    });
+  }
+
+  void _handleQuizAnswer(ObjectTranslation selectedAnswer) {
+    final isCorrect = selectedAnswer == _correctAnswer;
+    
+    setState(() {
+      _showingQuizOptions = false;
+      if (isCorrect) {
+        _score += 10 + (_streak * 2);
+        _streak++;
+        _feedbackMessage = '🎉 Correto! +${10 + ((_streak - 1) * 2)} pontos';
+        _feedbackColor = Colors.green;
+      } else {
+        _streak = 0;
+        _feedbackMessage = '❌ Ops! Era "${_correctAnswer!.english}"';
+        _feedbackColor = Colors.red;
+      }
+    });
+    
+    _gameAnimationController.forward().then((_) {
+      _gameAnimationController.reset();
+    });
+    
+    if (isCorrect) {
+      _speakInLanguage("Correct!", "en-US");
+    } else {
+      _speakInLanguage(_correctAnswer!.english, "en-US");
+    }
+    
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _feedbackMessage = '';
+        });
+      }
+    });
   }
 
   ObjectTranslation? _findBestMatch(String detected) {
@@ -254,6 +358,15 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
     }
   }
 
+  Future<void> _speakInLanguage(String text, String language) async {
+    try {
+      await flutterTts.setLanguage(language);
+      await flutterTts.speak(text);
+    } catch (e) {
+      _showErrorDialog('Erro no áudio: $e');
+    }
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -276,6 +389,7 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
   void dispose() {
     _imageLabeler.close();
     _animationController.dispose();
+    _gameAnimationController.dispose();
     super.dispose();
   }
 
@@ -283,16 +397,45 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("LensCanTalk - Aprenda Brincando"),
-        backgroundColor: Colors.blue,
+        title: Text(
+          _currentMode == GameMode.learning 
+              ? "LensCanTalk - Aprenda se Divertindo" 
+              : "LensCanTalk - Modo Game",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: _currentMode == GameMode.learning 
+            ? Color(0xFF1E3C72)  // Cor de fundo para modo aprendizado
+            : Colors.deepPurple, // Cor de fundo para modo Game
         elevation: 0,
+        actions: [
+          if (_currentMode == GameMode.quiz) 
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  'Score: $_score',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue, Colors.lightBlue],
+            colors: _currentMode == GameMode.learning 
+                ? [Color(0xFF2A5298), Color(0xFF4A90E2)]
+                : [const Color.fromARGB(228, 104, 58, 183), Colors.deepPurpleAccent],
           ),
         ),
         child: SafeArea(
@@ -300,6 +443,21 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: ElevatedButton.icon(
+                    onPressed: _toggleGameMode,
+                    icon: Icon(_currentMode == GameMode.learning ? Icons.games : Icons.school),
+                    label: Text(_currentMode == GameMode.learning ? 'Modo Game' : 'Modo Aprendizado'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: _currentMode == GameMode.learning ? Colors.blue : Colors.purple,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ),
+
                 Expanded(
                   flex: 3,
                   child: Container(
@@ -319,15 +477,21 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                       borderRadius: BorderRadius.circular(20),
                       child: _image != null
                           ? Image.file(_image!, fit: BoxFit.cover)
-                          : const Center(
+                          : Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.camera_alt, size: 64, color: Colors.grey),
-                                  SizedBox(height: 16),
+                                  Icon(
+                                    _currentMode == GameMode.learning ? Icons.camera_alt : Icons.quiz,
+                                    size: 64, 
+                                    color: Colors.grey
+                                  ),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    "Capture uma imagem para começar!",
-                                    style: TextStyle(
+                                    _currentMode == GameMode.learning
+                                        ? "Capture uma imagem para começar!"
+                                        : "Capture e teste seus conhecimentos!",
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       color: Colors.grey,
                                       fontWeight: FontWeight.w500,
@@ -370,19 +534,23 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                               ],
                             ),
                           )
-                        : _detectedObjects.isNotEmpty
-                            ? _buildResultsWidget()
-                            : const Center(
-                                child: Text(
-                                  "Aponte para objetos, brinquedos, frutas ou animais!",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey,
+                        : _showingQuizOptions
+                            ? _buildQuizWidget()
+                            : _detectedObjects.isNotEmpty
+                                ? _buildResultsWidget()
+                                : Center(
+                                    child: Text(
+                                      _currentMode == GameMode.learning
+                                          ? "Aponte para objetos, brinquedos, frutas ou animais!"
+                                          : "Aponte para um objeto e responda o quiz!",
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                   ),
                 ),
                 
@@ -396,7 +564,7 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: Colors.blue,
+                          foregroundColor: _currentMode == GameMode.learning ? Colors.blue : Colors.purple,
                           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -421,12 +589,138 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
     );
   }
 
+  Widget _buildQuizWidget() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (_feedbackMessage.isNotEmpty)
+          AnimatedBuilder(
+            animation: _bounceAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _bounceAnimation.value,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: _feedbackColor.withOpacity(0.1),
+                    border: Border.all(color: _feedbackColor),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _feedbackMessage,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _feedbackColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+
+        if (_feedbackMessage.isEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                _correctAnswer?.emoji ?? '',
+                style: const TextStyle(fontSize: 40),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  "What is this in English?",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 20),
+          
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: _quizOptions.map((option) => Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ElevatedButton(
+                    onPressed: () => _handleQuizAnswer(option),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      foregroundColor: Colors.black87,
+                      padding: const EdgeInsets.all(15),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: Text(
+                      option.english,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                )).toList(),
+              ),
+            ),
+          ),
+
+          if (_streak > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                '🔥 Sequência: $_streak',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildResultsWidget() {
     final primaryObject = _detectedObjects.first;
     
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (_feedbackMessage.isNotEmpty)
+          AnimatedBuilder(
+            animation: _bounceAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _bounceAnimation.value,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: _feedbackColor.withOpacity(0.1),
+                    border: Border.all(color: _feedbackColor),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _feedbackMessage,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: _feedbackColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            },
+          ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -455,13 +749,6 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                       color: Colors.green,
                     ),
                   ),
-                  // Text(
-                  //   "Confiança: ${(primaryObject.confidence * 100).toStringAsFixed(1)}%",
-                  //   style: const TextStyle(
-                  //     fontSize: 12,
-                  //     color: Colors.grey,
-                  //   ),
-                  // ),
                 ],
               ),
             ),
@@ -470,29 +757,30 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
         
         const SizedBox(height: 20),
         
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton.icon(
-              onPressed: () => _speak(primaryObject.translation.english),
-              icon: const Icon(Icons.volume_up),
-              label: const Text("English"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+        if (_currentMode == GameMode.learning)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _speak(primaryObject.translation.english),
+                icon: const Icon(Icons.volume_up),
+                label: const Text("English"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
               ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () => _speakPortuguese(primaryObject.translation.portuguese),
-              icon: const Icon(Icons.volume_up),
-              label: const Text("Português"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
+              ElevatedButton.icon(
+                onPressed: () => _speakPortuguese(primaryObject.translation.portuguese),
+                icon: const Icon(Icons.volume_up),
+                label: const Text("Português"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
         
         if (_detectedObjects.length > 1) ...[
           const SizedBox(height: 16),
