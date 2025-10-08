@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/historico_screen.dart';
 import 'screens/cadastro_palavra_screen.dart';
 import 'screens/mlkit_screen.dart';
 import 'screens/configuracoes_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +40,93 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const WelcomeScreen(),
+      // Verifica se o usuário está logado
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LoadingScreen();
+          }
+          
+          if (snapshot.hasData) {
+            return const WelcomeScreen();
+          }
+          
+          return const LoginScreen();
+        },
+      ),
+      routes: {
+        '/login': (context) => const LoginScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
+        '/menu': (context) => const MenuScreen(),
+      },
+    );
+  }
+}
+
+// Tela de carregamento
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E3C72),
+              Color(0xFF2A5298),
+              Color(0xFF4A90E2),
+              Color(0xFF87CEEB),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.visibility,
+                  size: 50,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Carregando...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -121,6 +209,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Usuário';
+    
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -141,6 +232,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Botão de logout no topo
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      if (context.mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
+                    },
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    tooltip: 'Sair',
+                  ),
+                ),
+                
                 const Spacer(flex: 2),
 
                 AnimatedBuilder(
@@ -205,6 +311,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const SizedBox(height: 20),
 
+                // Saudação personalizada
+                SlideTransition(
+                  position: _textSlide,
+                  child: FadeTransition(
+                    opacity: _textFade,
+                    child: Text(
+                      'Olá, $userName! 👋',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: 40),
 
                 // Descrição animada
@@ -213,7 +336,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: FadeTransition(
                     opacity: _textFade,
                     child: const Text(
-                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚🌍⚙️',
+                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚�⚙️',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white,
@@ -304,7 +427,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     children: [
                       _buildFeatureIcon('✏️', 'Cadastrar'),
                       _buildFeatureIcon('📚', 'Histórico'),
-                      _buildFeatureIcon('🌍', 'Traduzir'),
+                      _buildFeatureIcon('�', 'Traduzir'),
                       _buildFeatureIcon('⚙️', 'Config'),
                     ],
                   ),
@@ -522,7 +645,7 @@ class _MenuScreenState extends State<MenuScreen>
                       _buildAnimatedButton(
                         context: context,
                         icon: Icons.language,
-                        emoji: '🌍',
+                        emoji: '�',
                         label: 'Câmera Tradução',
                         description: 'Traduza com inteligência!',
                         colors: [const Color(0xFFFFD89B), const Color(0xFF19547B)],
@@ -578,7 +701,7 @@ class _MenuScreenState extends State<MenuScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildBouncingEmoji('', 0),
+                    _buildBouncingEmoji('�', 0),
                     const SizedBox(width: 10),
                     const Text(
                       'Divirta-se aprendendo!',
@@ -589,7 +712,7 @@ class _MenuScreenState extends State<MenuScreen>
                       ),
                     ),
                     const SizedBox(width: 10),
-                    _buildBouncingEmoji('', 500),
+                    _buildBouncingEmoji('�', 500),
                   ],
                 ),
               ),
@@ -615,7 +738,6 @@ class _MenuScreenState extends State<MenuScreen>
       tween: Tween(begin: 0.0, end: 1.0),
       curve: Curves.elasticOut,
       builder: (context, value, child) {
-        // Garantir que os valores estejam dentro dos limites válidos
         final clampedValue = value.clamp(0.0, 1.0);
         final scaleValue = (clampedValue * 0.8 + 0.2).clamp(0.2, 1.0);
         
@@ -733,7 +855,6 @@ class _MenuScreenState extends State<MenuScreen>
       duration: const Duration(milliseconds: 2000),
       tween: Tween(begin: 0.0, end: 1.0),
       builder: (context, value, child) {
-        // Animação de bounce suave
         final bounceValue = (1 - (1 - value) * (1 - value)) * 10;
         return Transform.translate(
           offset: Offset(0, -bounceValue.clamp(0.0, 10.0)),
