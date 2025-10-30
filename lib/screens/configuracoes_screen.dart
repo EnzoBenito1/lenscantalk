@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../helpers/theme_manager.dart';
 
 class ConfiguracoesScreen extends StatefulWidget {
   const ConfiguracoesScreen({super.key});
@@ -76,7 +78,6 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
           TextButton(
             child: const Text('Confirmar'),
             onPressed: () async {
-              // Se não tem PIN, sai direto
               if (pinSalvo == null) {
                 setState(() => isChildMode = false);
                 await _salvarModo(false);
@@ -84,7 +85,6 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
                 return;
               }
               
-              // Se tem PIN, valida
               if (pinController.text == pinSalvo) {
                 setState(() => isChildMode = false);
                 await _salvarModo(false);
@@ -150,17 +150,88 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
     );
   }
 
+  void _mostrarSeletorTema() {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Escolha um tema'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: AppThemeData.themes.length,
+            itemBuilder: (context, index) {
+              final theme = AppThemeData.themes[index];
+              final isSelected = themeManager.currentTheme.name == theme.name;
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: theme.gradientColors),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected ? Colors.white : Colors.transparent,
+                    width: 3,
+                  ),
+                ),
+                child: ListTile(
+                  leading: Icon(theme.icon, color: Colors.white),
+                  title: Text(
+                    theme.displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle, color: Colors.white)
+                      : null,
+                  onTap: () {
+                    themeManager.setTheme(theme);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tema "${theme.displayName}" aplicado!'),
+                        backgroundColor: theme.gradientColors[2],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModoFilho() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
           'Modo Filho Ativado',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 20, 
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 20),
         ElevatedButton(
           onPressed: _alternarModo,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black87,
+          ),
           child: const Text('Sair do modo filho'),
         ),
       ],
@@ -168,54 +239,103 @@ class _ConfiguracoesScreenState extends State<ConfiguracoesScreen> {
   }
 
   Widget _buildModoPai() {
-    return ListView(
-      children: [
-        const ListTile(
-          title: Text('Alterar senha'),
-        ),
-        const ListTile(
-          title: Text('Preferências'),
-        ),
-        const ListTile(
-          title: Text('Gerenciar contas'),
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.child_care),
-          title: const Text('Ativar modo filho'),
-          onTap: _alternarModo,
-        ),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.lock),
-          title: Text(pinSalvo == null ? 'Definir PIN' : 'Alterar PIN'),
-          subtitle: const Text('PIN para sair do modo filho'),
-          onTap: () => _mostrarDialogoNovoPin(alterar: pinSalvo != null),
-        ),
-        if (pinSalvo != null)
+    final themeManager = Provider.of<ThemeManager>(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
           ListTile(
-            leading: const Icon(Icons.lock_open),
-            title: const Text('Remover PIN'),
-            onTap: () async {
-              await _salvarPin(null);
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('PIN removido com sucesso.')),
-                );
-              }
-            },
+            leading: const Icon(Icons.color_lens),
+            title: const Text('Tema'),
+            subtitle: Text(themeManager.currentTheme.displayName),
+            trailing: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: themeManager.currentTheme.gradientColors,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey, width: 2),
+              ),
+            ),
+            onTap: _mostrarSeletorTema,
           ),
-      ],
+          const Divider(),
+          const ListTile(
+            title: Text('Alterar senha'),
+          ),
+          const ListTile(
+            title: Text('Preferências'),
+          ),
+          const ListTile(
+            title: Text('Gerenciar contas'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.child_care),
+            title: const Text('Ativar modo filho'),
+            onTap: _alternarModo,
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.lock),
+            title: Text(pinSalvo == null ? 'Definir PIN' : 'Alterar PIN'),
+            subtitle: const Text('PIN para sair do modo filho'),
+            onTap: () => _mostrarDialogoNovoPin(alterar: pinSalvo != null),
+          ),
+          if (pinSalvo != null)
+            ListTile(
+              leading: const Icon(Icons.lock_open),
+              title: const Text('Remover PIN'),
+              onTap: () async {
+                await _salvarPin(null);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('PIN removido com sucesso.')),
+                  );
+                }
+              },
+            ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('Configurações')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: isChildMode ? _buildModoFilho() : _buildModoPai(),
+      appBar: AppBar(
+        title: const Text('Configurações'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: themeManager.currentTheme.gradientColors,
+            ),
+          ),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: themeManager.currentTheme.gradientColors,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: isChildMode ? _buildModoFilho() : _buildModoPai(),
+        ),
       ),
     );
   }

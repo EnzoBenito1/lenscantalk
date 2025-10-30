@@ -1,12 +1,12 @@
-// Salve como: lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final List<Color> themeColors;
+  
+  const LoginScreen({super.key, required this.themeColors});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -80,14 +80,11 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
     
     try {
-      // Deslogar qualquer conta anterior
       await _googleSignIn.signOut();
       await _auth.signOut();
       
-      // Iniciar o fluxo de login
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
-      // Se o usuário cancelou o login
       if (googleUser == null) {
         if (mounted) {
           setState(() => _isLoading = false);
@@ -95,24 +92,19 @@ class _LoginScreenState extends State<LoginScreen>
         return;
       }
 
-      // Obter os detalhes de autenticação
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      // Verificar se temos os tokens necessários
       if (googleAuth.accessToken == null || googleAuth.idToken == null) {
         throw Exception('Tokens de autenticação não foram recebidos');
       }
       
-      // Criar credencial do Firebase
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Fazer login no Firebase
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       
-      // Verificar se o login foi bem-sucedido
       if (userCredential.user != null && mounted) {
         _showSuccessSnackBar('Login realizado com sucesso! 🎉');
         Navigator.pushReplacementNamed(context, '/welcome');
@@ -160,7 +152,6 @@ class _LoginScreenState extends State<LoginScreen>
 
     try {
       if (_isLogin) {
-        // Login
         final userCredential = await _auth.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
@@ -171,7 +162,6 @@ class _LoginScreenState extends State<LoginScreen>
           Navigator.pushReplacementNamed(context, '/welcome');
         }
       } else {
-        // Cadastro
         final userCredential = await _auth.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
@@ -265,16 +255,11 @@ class _LoginScreenState extends State<LoginScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1E3C72),
-              Color(0xFF2A5298),
-              Color(0xFF4A90E2),
-              Color(0xFF87CEEB),
-            ],
+            colors: widget.themeColors,
           ),
         ),
         child: SafeArea(
@@ -284,7 +269,6 @@ class _LoginScreenState extends State<LoginScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo animado
                   AnimatedBuilder(
                     animation: _logoController,
                     builder: (context, child) {
@@ -296,8 +280,8 @@ class _LoginScreenState extends State<LoginScreen>
                             width: 100,
                             height: 100,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                              gradient: LinearGradient(
+                                colors: [widget.themeColors.last, widget.themeColors.first],
                               ),
                               shape: BoxShape.circle,
                               boxShadow: [
@@ -321,7 +305,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                   const SizedBox(height: 24),
 
-                  // Título
                   SlideTransition(
                     position: _formSlide,
                     child: FadeTransition(
@@ -363,7 +346,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                   const SizedBox(height: 40),
 
-                  // Card do formulário
                   SlideTransition(
                     position: _formSlide,
                     child: FadeTransition(
@@ -385,20 +367,19 @@ class _LoginScreenState extends State<LoginScreen>
                           key: _formKey,
                           child: Column(
                             children: [
-                              // Campo de email
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: InputDecoration(
                                   labelText: 'Email',
-                                  prefixIcon: const Icon(Icons.email, color: Color(0xFF1E3C72)),
+                                  prefixIcon: Icon(Icons.email, color: widget.themeColors.first),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF1E3C72),
+                                    borderSide: BorderSide(
+                                      color: widget.themeColors.first,
                                       width: 2,
                                     ),
                                   ),
@@ -416,19 +397,18 @@ class _LoginScreenState extends State<LoginScreen>
 
                               const SizedBox(height: 16),
 
-                              // Campo de senha
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
                                   labelText: 'Senha',
-                                  prefixIcon: const Icon(Icons.lock, color: Color(0xFF1E3C72)),
+                                  prefixIcon: Icon(Icons.lock, color: widget.themeColors.first),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
                                           ? Icons.visibility_off
                                           : Icons.visibility,
-                                      color: Color(0xFF1E3C72),
+                                      color: widget.themeColors.first,
                                     ),
                                     onPressed: () {
                                       setState(() {
@@ -441,8 +421,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFF1E3C72),
+                                    borderSide: BorderSide(
+                                      color: widget.themeColors.first,
                                       width: 2,
                                     ),
                                   ),
@@ -460,14 +440,13 @@ class _LoginScreenState extends State<LoginScreen>
 
                               const SizedBox(height: 24),
 
-                              // Botão de login/cadastro
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _submitForm,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1E3C72),
+                                    backgroundColor: widget.themeColors.first,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -497,7 +476,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                               const SizedBox(height: 16),
 
-                              // Divisor
                               Row(
                                 children: [
                                   Expanded(
@@ -527,7 +505,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                               const SizedBox(height: 16),
 
-                              // Botão Google
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -539,12 +516,12 @@ class _LoginScreenState extends State<LoginScreen>
                                     errorBuilder: (context, error, stackTrace) =>
                                         const Icon(Icons.g_mobiledata, size: 30),
                                   ),
-                                  label: const Text(
+                                  label: Text(
                                     'Continuar com Google',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E3C72),
+                                      color: widget.themeColors.first,
                                     ),
                                   ),
                                   style: OutlinedButton.styleFrom(
@@ -561,7 +538,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                               const SizedBox(height: 16),
 
-                              // Alternar entre login e cadastro
                               TextButton(
                                 onPressed: () {
                                   setState(() {
@@ -570,8 +546,8 @@ class _LoginScreenState extends State<LoginScreen>
                                 },
                                 child: RichText(
                                   text: TextSpan(
-                                    style: const TextStyle(
-                                      color: Color(0xFF1E3C72),
+                                    style: TextStyle(
+                                      color: widget.themeColors.first,
                                       fontSize: 14,
                                     ),
                                     children: [

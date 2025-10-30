@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:lens_can_talk/screens/configuracoes_screen.dart';
 import 'firebase_options.dart';
 import 'screens/historico_screen.dart';
 import 'screens/cadastro_palavra_screen.dart';
 import 'screens/mlkit_screen.dart';
 import 'screens/login_screen.dart';
+import 'helpers/theme_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,65 +23,75 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'LensCanTalk',
-      theme: ThemeData(
-        primarySwatch: Colors.purple,
-        fontFamily: 'Comic Sans MS',
-        scaffoldBackgroundColor: const Color(0xFFF0F8FF),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeManager(),
+      child: Consumer<ThemeManager>(
+        builder: (context, themeManager, child) {
+          return MaterialApp(
+            title: 'LensCanTalk',
+            theme: ThemeData(
+              primarySwatch: Colors.purple,
+              fontFamily: 'Comic Sans MS',
+              scaffoldBackgroundColor: const Color(0xFFF0F8FF),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
-            textStyle: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            home: StreamBuilder<User?>(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return LoadingScreen(themeColors: themeManager.currentTheme.gradientColors);
+                }
+                
+                if (snapshot.hasData) {
+                  return WelcomeScreen(themeColors: themeManager.currentTheme.gradientColors);
+                }
+                
+                return LoginScreen(themeColors: themeManager.currentTheme.gradientColors);
+              },
             ),
-          ),
-        ),
-      ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingScreen();
-          }
-          
-          if (snapshot.hasData) {
-            return const WelcomeScreen();
-          }
-          
-          return const LoginScreen();
+            routes: {
+              '/login': (context) => LoginScreen(
+                themeColors: themeManager.currentTheme.gradientColors,
+              ),
+              '/welcome': (context) => WelcomeScreen(
+                themeColors: themeManager.currentTheme.gradientColors,
+              ),
+              '/menu': (context) => MenuScreen(
+                themeColors: themeManager.currentTheme.gradientColors,
+              ),
+            },
+          );
         },
       ),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/welcome': (context) => const WelcomeScreen(),
-        '/menu': (context) => const MenuScreen(),
-      },
     );
   }
 }
 
 class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({super.key});
+  final List<Color> themeColors;
+  
+  const LoadingScreen({super.key, required this.themeColors});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1E3C72),
-              Color(0xFF2A5298),
-              Color(0xFF4A90E2),
-              Color(0xFF87CEEB),
-            ],
+            colors: themeColors,
           ),
         ),
         child: Center(
@@ -90,8 +102,8 @@ class LoadingScreen extends StatelessWidget {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                  gradient: LinearGradient(
+                    colors: [themeColors.last, themeColors.first],
                   ),
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -130,7 +142,9 @@ class LoadingScreen extends StatelessWidget {
 }
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+  final List<Color> themeColors;
+  
+  const WelcomeScreen({super.key, required this.themeColors});
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -209,16 +223,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF1E3C72), // Azul escuro
-              Color(0xFF2A5298), // Azul médio
-              Color(0xFF4A90E2), // Azul claro
-              Color(0xFF87CEEB), // Azul céu
-            ],
+            colors: widget.themeColors,
           ),
         ),
         child: SafeArea(
@@ -254,8 +263,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           width: 120,
                           height: 120,
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                            gradient: LinearGradient(
+                              colors: [widget.themeColors.last, widget.themeColors.first],
                             ),
                             shape: BoxShape.circle,
                             boxShadow: [
@@ -327,7 +336,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: FadeTransition(
                     opacity: _textFade,
                     child: const Text(
-                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚�⚙️',
+                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚🎯⚙️',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white,
@@ -349,11 +358,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     margin: const EdgeInsets.symmetric(horizontal: 20),
                     child: ElevatedButton(
                       onPressed: () {
+                        final themeManager = Provider.of<ThemeManager>(context, listen: false);
                         Navigator.pushReplacement(
                           context,
                           PageRouteBuilder(
                             pageBuilder: (context, animation, secondaryAnimation) =>
-                                const MenuScreen(),
+                                MenuScreen(themeColors: themeManager.currentTheme.gradientColors),
                             transitionsBuilder: (context, animation, secondaryAnimation, child) {
                               return FadeTransition(
                                 opacity: animation,
@@ -372,7 +382,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1E3C72),
+                        foregroundColor: widget.themeColors.first,
                         elevation: 10,
                         shadowColor: Colors.black.withOpacity(0.3),
                         shape: RoundedRectangleBorder(
@@ -393,7 +403,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E3C72).withOpacity(0.1),
+                              color: widget.themeColors.first.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -416,7 +426,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     children: [
                       _buildFeatureIcon('✏️', 'Cadastrar'),
                       _buildFeatureIcon('📚', 'Histórico'),
-                      _buildFeatureIcon('�', 'Traduzir'),
+                      _buildFeatureIcon('🎯', 'Traduzir'),
                       _buildFeatureIcon('⚙️', 'Config'),
                     ],
                   ),
@@ -464,7 +474,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 }
 
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({super.key});
+  final List<Color> themeColors;
+  
+  const MenuScreen({super.key, required this.themeColors});
 
   @override
   State<MenuScreen> createState() => _MenuScreenState();
@@ -502,16 +514,11 @@ class _MenuScreenState extends State<MenuScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E3C72),
-              Color(0xFF2A5298),
-              Color(0xFF4A90E2),
-              Color(0xFF87CEEB),
-            ],
+            colors: widget.themeColors,
           ),
         ),
         child: SafeArea(
@@ -527,8 +534,8 @@ class _MenuScreenState extends State<MenuScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 15),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF87CEEB), Color(0xFF1E3C72)],
+                          gradient: LinearGradient(
+                            colors: [widget.themeColors.last, widget.themeColors.first],
                           ),
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
@@ -541,14 +548,14 @@ class _MenuScreenState extends State<MenuScreen>
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
+                          children: const [
+                            Icon(
                               Icons.visibility,
                               color: Colors.white,
                               size: 30,
                             ),
-                            const SizedBox(width: 10),
-                            const Text(
+                            SizedBox(width: 10),
+                            Text(
                               'LensCanTalk',
                               style: TextStyle(
                                 fontSize: 28,
@@ -563,8 +570,8 @@ class _MenuScreenState extends State<MenuScreen>
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            const Icon(
+                            SizedBox(width: 10),
+                            Icon(
                               Icons.chat_bubble,
                               color: Colors.white,
                               size: 30,
@@ -633,7 +640,7 @@ class _MenuScreenState extends State<MenuScreen>
                       _buildAnimatedButton(
                         context: context,
                         icon: Icons.language,
-                        emoji: '�',
+                        emoji: '🎯',
                         label: 'Câmera Tradução',
                         description: 'Traduza com inteligência!',
                         colors: [const Color(0xFFFFD89B), const Color(0xFF19547B)],
@@ -689,7 +696,7 @@ class _MenuScreenState extends State<MenuScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildBouncingEmoji('�', 0),
+                    _buildBouncingEmoji('🎯', 0),
                     const SizedBox(width: 10),
                     const Text(
                       'Divirta-se aprendendo!',
@@ -700,7 +707,7 @@ class _MenuScreenState extends State<MenuScreen>
                       ),
                     ),
                     const SizedBox(width: 10),
-                    _buildBouncingEmoji('�', 500),
+                    _buildBouncingEmoji('🎯', 500),
                   ],
                 ),
               ),
@@ -861,10 +868,10 @@ class _MenuScreenState extends State<MenuScreen>
         content: Container(
           padding: const EdgeInsets.all(8),
           child: Row(
-            children: [
-              const Text('🚧'),
-              const SizedBox(width: 10),
-              const Expanded(
+            children: const [
+              Text('🚧'),
+              SizedBox(width: 10),
+              Expanded(
                 child: Text(
                   'Funcionalidade em desenvolvimento! Em breve teremos mais diversão! 🎈',
                   style: TextStyle(
@@ -873,7 +880,7 @@ class _MenuScreenState extends State<MenuScreen>
                   ),
                 ),
               ),
-              const Text('🎨'),
+              Text('🎨'),
             ],
           ),
         ),
