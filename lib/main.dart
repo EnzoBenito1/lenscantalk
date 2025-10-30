@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:lens_can_talk/screens/configuracoes_screen.dart';
 import 'firebase_options.dart';
 import 'screens/historico_screen.dart';
 import 'screens/cadastro_palavra_screen.dart';
 import 'screens/mlkit_screen.dart';
-import 'screens/configuracoes_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() async {
@@ -40,7 +40,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      // Verifica se o usuário está logado
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -64,7 +63,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Tela de carregamento
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
@@ -131,7 +129,6 @@ class LoadingScreen extends StatelessWidget {
   }
 }
 
-// Tela de boas-vindas com fundo azul
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -154,7 +151,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void initState() {
     super.initState();
     
-    // Animação do logo
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -166,7 +162,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
-    // Animação do texto
     _textController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -232,7 +227,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Botão de logout no topo
                 Align(
                   alignment: Alignment.topRight,
                   child: IconButton(
@@ -285,7 +279,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const SizedBox(height: 40),
 
-                // Título principal animado
                 SlideTransition(
                   position: _textSlide,
                   child: FadeTransition(
@@ -311,7 +304,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const SizedBox(height: 20),
 
-                // Saudação personalizada
                 SlideTransition(
                   position: _textSlide,
                   child: FadeTransition(
@@ -330,7 +322,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const SizedBox(height: 40),
 
-                // Descrição animada
                 SlideTransition(
                   position: _textSlide,
                   child: FadeTransition(
@@ -350,7 +341,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const Spacer(flex: 2),
 
-                // Botão "Começar" animado
                 ScaleTransition(
                   scale: _buttonScale,
                   child: Container(
@@ -419,7 +409,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                 const SizedBox(height: 40),
 
-                // Indicadores de funcionalidades
                 FadeTransition(
                   opacity: _textFade,
                   child: Row(
@@ -597,7 +586,6 @@ class _MenuScreenState extends State<MenuScreen>
                 ),
               ),
 
-              // Botões do menu
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -671,7 +659,8 @@ class _MenuScreenState extends State<MenuScreen>
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const ConfiguracoesScreen()),
+                            MaterialPageRoute(
+                                builder: (context) => const ConfiguracoesScreen()),
                           );
                         },
                       ),
@@ -695,7 +684,6 @@ class _MenuScreenState extends State<MenuScreen>
                 ),
               ),
 
-              // Footer divertido
               Container(
                 padding: const EdgeInsets.all(20),
                 child: Row(
