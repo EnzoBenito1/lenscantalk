@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:provider/provider.dart';
+import '../helpers/theme_manager.dart';
+import '../palavra.dart';
+import '../palavra_service.dart';
 
 enum GameMode { learning, quiz }
 
@@ -17,10 +21,12 @@ class MLKitScreen extends StatefulWidget {
 class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
   final FlutterTts flutterTts = FlutterTts();
+  final PalavraService _palavraService = PalavraService();
   
   File? _image;
   List<DetectedObject> _detectedObjects = [];
   bool _isProcessing = false;
+  bool _isSaving = false;
   String _currentLanguage = 'pt-BR';
   late AnimationController _animationController;
   late AnimationController _gameAnimationController;
@@ -225,6 +231,60 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
     }
   }
 
+  Future<void> _salvarNoHistorico() async {
+    if (_detectedObjects.isEmpty || _isSaving) return;
+    
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final translation = _detectedObjects.first.translation;
+      final palavra = Palavra(
+        id: '',
+        nome: translation.english,
+        traducao: translation.portuguese,
+        data: DateTime.now(),
+        imagem: translation.emoji,
+      );
+      
+      await _palavraService.salvarPalavra(palavra);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Text(translation.emoji, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('✓ "${translation.english}" salvo no histórico!'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
+  }
+
   void _setupQuiz(ObjectTranslation correctAnswer) {
     final random = Random();
     final allObjects = _objectMap.values.toList();
@@ -395,6 +455,11 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    final gradientColors = _currentMode == GameMode.learning 
+        ? themeManager.currentTheme.gradientColors
+        : [const Color.fromARGB(228, 104, 58, 183), Colors.deepPurpleAccent];
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -407,10 +472,15 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: _currentMode == GameMode.learning 
-            ? Color(0xFF1E3C72)  // Cor de fundo para modo aprendizado
-            : Colors.deepPurple, // Cor de fundo para modo Game
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradientColors,
+            ),
+          ),
+        ),
         actions: [
           if (_currentMode == GameMode.quiz) 
             Padding(
@@ -433,9 +503,7 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: _currentMode == GameMode.learning 
-                ? [Color(0xFF2A5298), Color(0xFF4A90E2)]
-                : [const Color.fromARGB(228, 104, 58, 183), Colors.deepPurpleAccent],
+            colors: gradientColors,
           ),
         ),
         child: SafeArea(
@@ -451,7 +519,9 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                     label: Text(_currentMode == GameMode.learning ? 'Modo Game' : 'Modo Aprendizado'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
-                      foregroundColor: _currentMode == GameMode.learning ? Colors.blue : Colors.purple,
+                      foregroundColor: _currentMode == GameMode.learning 
+                          ? themeManager.currentTheme.gradientColors[2]
+                          : Colors.purple,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
@@ -564,7 +634,9 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: _currentMode == GameMode.learning ? Colors.blue : Colors.purple,
+                          foregroundColor: _currentMode == GameMode.learning 
+                              ? themeManager.currentTheme.gradientColors[2]
+                              : Colors.purple,
                           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -757,7 +829,7 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
         
         const SizedBox(height: 20),
         
-        if (_currentMode == GameMode.learning)
+        if (_currentMode == GameMode.learning) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -781,6 +853,37 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
               ),
             ],
           ),
+          
+          const SizedBox(height: 16),
+          
+          // Botão "Entendi" para salvar no histórico
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isSaving ? null : _salvarNoHistorico,
+              icon: _isSaving 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.check_circle),
+              label: Text(_isSaving ? "Salvando..." : "Entendi! Salvar no Histórico"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+              ),
+            ),
+          ),
+        ],
         
         if (_detectedObjects.length > 1) ...[
           const SizedBox(height: 16),
