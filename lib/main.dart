@@ -696,7 +696,7 @@ class _MenuScreenState extends State<MenuScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _buildBouncingEmoji('🎯', 0),
+                    _buildBouncingEmoji('', 0),
                     const SizedBox(width: 10),
                     const Text(
                       'Divirta-se aprendendo!',
@@ -707,7 +707,7 @@ class _MenuScreenState extends State<MenuScreen>
                       ),
                     ),
                     const SizedBox(width: 10),
-                    _buildBouncingEmoji('🎯', 500),
+                    _buildBouncingEmoji('', 500),
                   ],
                 ),
               ),

@@ -762,93 +762,67 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
   Widget _buildResultsWidget() {
     final primaryObject = _detectedObjects.first;
     
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (_feedbackMessage.isNotEmpty)
-          AnimatedBuilder(
-            animation: _bounceAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _bounceAnimation.value,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: _feedbackColor.withOpacity(0.1),
-                    border: Border.all(color: _feedbackColor),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    _feedbackMessage,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _feedbackColor,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          if (_feedbackMessage.isNotEmpty)
+            AnimatedBuilder(
+              animation: _bounceAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _bounceAnimation.value,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: _feedbackColor.withOpacity(0.1),
+                      border: Border.all(color: _feedbackColor),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    textAlign: TextAlign.center,
+                    child: Text(
+                      _feedbackMessage,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _feedbackColor,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              primaryObject.translation.emoji,
-              style: const TextStyle(fontSize: 40),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    primaryObject.translation.english.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  Text(
-                    primaryObject.translation.portuguese.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        
-        const SizedBox(height: 20),
-        
-        if (_currentMode == GameMode.learning) ...[
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton.icon(
-                onPressed: () => _speak(primaryObject.translation.english),
-                icon: const Icon(Icons.volume_up),
-                label: const Text("English"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
+              Text(
+                primaryObject.translation.emoji,
+                style: const TextStyle(fontSize: 40),
               ),
-              ElevatedButton.icon(
-                onPressed: () => _speakPortuguese(primaryObject.translation.portuguese),
-                icon: const Icon(Icons.volume_up),
-                label: const Text("Português"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      primaryObject.translation.english.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    Text(
+                      primaryObject.translation.portuguese.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -856,55 +830,99 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
           
           const SizedBox(height: 16),
           
-          // Botão "Entendi" para salvar no histórico
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _salvarNoHistorico,
-              icon: _isSaving 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.check_circle),
-              label: Text(_isSaving ? "Salvando..." : "Entendi! Salvar no Histórico"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          if (_currentMode == GameMode.learning) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _speak(primaryObject.translation.english),
+                    icon: const Icon(Icons.volume_up, size: 18),
+                    label: const Text("English", style: TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
                 ),
-                elevation: 3,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _speakPortuguese(primaryObject.translation.portuguese),
+                    icon: const Icon(Icons.volume_up, size: 18),
+                    label: const Text("Português", style: TextStyle(fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Botão "Entendi" para salvar no histórico
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isSaving ? null : _salvarNoHistorico,
+                icon: _isSaving 
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.check_circle, size: 20),
+                label: Text(
+                  _isSaving ? "Salvando..." : "✓ Entendi",
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 3,
+                ),
               ),
             ),
-          ),
+          ],
+          
+          if (_detectedObjects.length > 1) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            const Text(
+              "Outros objetos:",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _detectedObjects.skip(1).take(2).map((obj) => 
+                Chip(
+                  avatar: Text(obj.translation.emoji, style: const TextStyle(fontSize: 16)),
+                  label: Text(
+                    "${obj.translation.english} • ${obj.translation.portuguese}",
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  backgroundColor: Colors.grey.shade200,
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ).toList(),
+            ),
+          ],
         ],
-        
-        if (_detectedObjects.length > 1) ...[
-          const SizedBox(height: 16),
-          const Divider(),
-          const Text(
-            "Outros objetos:",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: _detectedObjects.skip(1).take(3).map((obj) => 
-              Chip(
-                avatar: Text(obj.translation.emoji),
-                label: Text("${obj.translation.english} • ${obj.translation.portuguese}"),
-                backgroundColor: Colors.grey.shade200,
-              ),
-            ).toList(),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }

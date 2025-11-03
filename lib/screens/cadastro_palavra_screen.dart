@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../palavra.dart';
 import '../palavra_service.dart';
+import '../helpers/theme_manager.dart';
 
 class CadastroPalavraScreen extends StatefulWidget {
   const CadastroPalavraScreen({super.key});
@@ -29,7 +31,6 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
   void initState() {
     super.initState();
     
-    // Inicializar controllers de animação
     _headerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -43,7 +44,6 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
       vsync: this,
     );
 
-    // Configurar animações
     _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _headerAnimationController, curve: Curves.bounceOut),
     );
@@ -54,7 +54,6 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
       CurvedAnimation(parent: _listAnimationController, curve: Curves.easeOutBack),
     );
 
-    // Iniciar animações
     _startAnimations();
     carregarPalavras();
   }
@@ -106,7 +105,6 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
   }
 
   Future<void> deletar(String id) async {
-    // Mostrar dialog de confirmação divertido
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => _buildFunDialog(),
@@ -120,14 +118,19 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
   }
 
   Widget _buildFunDialog() {
+    final themeManager = Provider.of<ThemeManager>(context, listen: false);
+    
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFFE0E6), Color(0xFFF0F8FF)],
+          gradient: LinearGradient(
+            colors: [
+              themeManager.currentTheme.gradientColors[0].withOpacity(0.3),
+              themeManager.currentTheme.gradientColors[3].withOpacity(0.3),
+            ],
           ),
         ),
         child: Column(
@@ -216,17 +219,16 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeManager = Provider.of<ThemeManager>(context);
+    final gradientColors = themeManager.currentTheme.gradientColors;
+    
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF87CEEB), // Sky blue
-              Color(0xFFE0F6FF), // Light blue
-              Color(0xFFFFF8DC), // Cornsilk
-            ],
+            colors: gradientColors,
           ),
         ),
         child: SafeArea(
@@ -254,7 +256,7 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                               ],
                             ),
                             child: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Color(0xFF4ECDC4)),
+                              icon: Icon(Icons.arrow_back, color: gradientColors[2]),
                               onPressed: () => Navigator.pop(context),
                             ),
                           ),
@@ -263,8 +265,8 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
                               decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFF9A9E), Color(0xFFFECACA)],
+                                gradient: LinearGradient(
+                                  colors: [gradientColors[1], gradientColors[2]],
                                 ),
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: [
@@ -275,12 +277,12 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                                   ),
                                 ],
                               ),
-                              child: Row(
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Text('✏️', style: TextStyle(fontSize: 24)),
-                                  const SizedBox(width: 10),
-                                  const Text(
+                                  Text('✏️', style: TextStyle(fontSize: 24)),
+                                  SizedBox(width: 10),
+                                  Text(
                                     'Cadastro de Palavras',
                                     style: TextStyle(
                                       fontSize: 18,
@@ -288,8 +290,8 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                                       color: Colors.white,
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-                                  const Text('📚', style: TextStyle(fontSize: 24)),
+                                  SizedBox(width: 10),
+                                  Text('📚', style: TextStyle(fontSize: 24)),
                                 ],
                               ),
                             ),
@@ -297,12 +299,12 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                         ],
                       ),
                       const SizedBox(height: 10),
-                      const Text(
+                      Text(
                         'Adicione novas palavras e expanda seu vocabulário!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF666666),
+                          color: Colors.white.withOpacity(0.9),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -339,17 +341,17 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                               controller: nomeController,
                               decoration: InputDecoration(
                                 labelText: 'Palavra em Português',
-                                labelStyle: const TextStyle(color: Color(0xFF666666)),
+                                labelStyle: TextStyle(color: gradientColors[2]),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(15),
-                                  borderSide: const BorderSide(color: Color(0xFFFF9A9E)),
+                                  borderSide: BorderSide(color: gradientColors[2]),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(15),
-                                  borderSide: const BorderSide(color: Color(0xFFFF9A9E), width: 2),
+                                  borderSide: BorderSide(color: gradientColors[2], width: 2),
                                 ),
                                 filled: true,
-                                fillColor: const Color(0xFFFFF8F8),
+                                fillColor: gradientColors[3].withOpacity(0.1),
                               ),
                             ),
                           ),
@@ -365,17 +367,17 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                               controller: traducaoController,
                               decoration: InputDecoration(
                                 labelText: 'Tradução em Inglês',
-                                labelStyle: const TextStyle(color: Color(0xFF666666)),
+                                labelStyle: TextStyle(color: gradientColors[2]),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(15),
-                                  borderSide: const BorderSide(color: Color(0xFF4ECDC4)),
+                                  borderSide: BorderSide(color: gradientColors[2]),
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(15),
-                                  borderSide: const BorderSide(color: Color(0xFF4ECDC4), width: 2),
+                                  borderSide: BorderSide(color: gradientColors[2], width: 2),
                                 ),
                                 filled: true,
-                                fillColor: const Color(0xFFF8FFFF),
+                                fillColor: gradientColors[3].withOpacity(0.1),
                               ),
                             ),
                           ),
@@ -388,20 +390,23 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                         child: ElevatedButton(
                           onPressed: adicionarPalavra,
                           style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            padding: EdgeInsets.zero,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
                             ),
-                            elevation: 8,
                           ),
-                          child: Container(
+                          child: Ink(
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)],
+                              gradient: LinearGradient(
+                                colors: [gradientColors[1], gradientColors[2]],
                               ),
                               borderRadius: BorderRadius.circular(25),
                             ),
-                            child: const Center(
-                              child: Text(
+                            child: Container(
+                              alignment: Alignment.center,
+                              child: const Text(
                                 '💾 Salvar Palavra',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -432,11 +437,11 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF333333),
+                        color: Colors.white,
                       ),
                     ),
                     const Spacer(),
-                    const Text('uwu', style: TextStyle(fontSize: 24)),
+                    const Text('uwu', style: TextStyle(fontSize: 24, color: Colors.white)),
                   ],
                 ),
               ),
@@ -505,12 +510,12 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                                     gradient: LinearGradient(
                                       colors: [
                                         Colors.white,
-                                        Color(0xFFF8F9FA),
+                                        gradientColors[3].withOpacity(0.2),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(15),
                                     border: Border.all(
-                                      color: const Color(0xFFE0E0E0),
+                                      color: gradientColors[2].withOpacity(0.3),
                                       width: 1,
                                     ),
                                     boxShadow: [
@@ -530,15 +535,15 @@ class _CadastroPalavraScreenState extends State<CadastroPalavraScreen>
                                       width: 50,
                                       height: 50,
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFFFFD89B), Color(0xFF19547B)],
+                                        gradient: LinearGradient(
+                                          colors: [gradientColors[1], gradientColors[2]],
                                         ),
                                         borderRadius: BorderRadius.circular(25),
                                       ),
-                                      child: const Center(
+                                      child: Center(
                                         child: Text(
-                                          '💬',
-                                          style: TextStyle(fontSize: 20),
+                                          p.imagem ?? '💬',
+                                          style: const TextStyle(fontSize: 24),
                                         ),
                                       ),
                                     ),
