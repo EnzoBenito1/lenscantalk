@@ -80,34 +80,48 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
     
     try {
+      // Limpar sessões anteriores
       await _googleSignIn.signOut();
       await _auth.signOut();
       
+      // Iniciar o login do Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       if (googleUser == null) {
+        // Usuário cancelou o login
         if (mounted) {
           setState(() => _isLoading = false);
         }
         return;
       }
 
+      // Obter os detalhes de autenticação
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw Exception('Tokens de autenticação não foram recebidos');
+      // Verificar se os tokens foram recebidos
+      if (googleAuth.accessToken == null && googleAuth.idToken == null) {
+        throw Exception('Falha ao obter tokens de autenticação');
       }
       
-      final AuthCredential credential = GoogleAuthProvider.credential(
+      // Criar a credencial
+      final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      // Fazer login no Firebase com a credencial
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       
-      if (userCredential.user != null && mounted) {
-        _showSuccessSnackBar('Login realizado com sucesso! 🎉');
-        Navigator.pushReplacementNamed(context, '/welcome');
+      // Verificar se o login foi bem-sucedido
+      if (userCredential.user != null) {
+        if (mounted) {
+          _showSuccessSnackBar('Login realizado com sucesso! 🎉');
+          // Dar um pequeno delay antes de navegar para garantir que o estado está atualizado
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/welcome');
+          }
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -125,14 +139,26 @@ class _LoginScreenState extends State<LoginScreen>
           case 'user-disabled':
             message = 'Esta conta foi desabilitada';
             break;
+          case 'user-not-found':
+            message = 'Usuário não encontrado';
+            break;
+          case 'wrong-password':
+            message = 'Senha incorreta';
+            break;
           default:
-            message = 'Erro: ${e.message}';
+            message = 'Erro: ${e.message ?? e.code}';
         }
         _showErrorSnackBar(message);
       }
     } on PlatformException catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Erro de plataforma: ${e.message}');
+        String message = 'Erro de plataforma: ${e.message ?? e.code}';
+        if (e.code == 'sign_in_canceled') {
+          message = 'Login cancelado pelo usuário';
+        } else if (e.code == 'network_error') {
+          message = 'Erro de rede. Verifique sua conexão';
+        }
+        _showErrorSnackBar(message);
       }
     } catch (e) {
       if (mounted) {
@@ -159,7 +185,10 @@ class _LoginScreenState extends State<LoginScreen>
         
         if (mounted && userCredential.user != null) {
           _showSuccessSnackBar('Bem-vindo de volta!');
-          Navigator.pushReplacementNamed(context, '/welcome');
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/welcome');
+          }
         }
       } else {
         final userCredential = await _auth.createUserWithEmailAndPassword(
@@ -169,7 +198,10 @@ class _LoginScreenState extends State<LoginScreen>
         
         if (mounted && userCredential.user != null) {
           _showSuccessSnackBar('Conta criada com sucesso!');
-          Navigator.pushReplacementNamed(context, '/welcome');
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/welcome');
+          }
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -216,6 +248,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -229,11 +262,13 @@ class _LoginScreenState extends State<LoginScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   void _showErrorSnackBar(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -247,6 +282,7 @@ class _LoginScreenState extends State<LoginScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
