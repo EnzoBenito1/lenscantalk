@@ -33,7 +33,6 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
   late Animation<double> _scaleAnimation;
   late Animation<double> _bounceAnimation;
 
-  // Game variables
   GameMode _currentMode = GameMode.learning;
   int _score = 0;
   int _streak = 0;

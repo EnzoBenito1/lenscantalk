@@ -10,37 +10,26 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase Core - Base do Firebase
   firebase_core: ^2.24.2
   
-  # Firebase Auth - Autenticação
   firebase_auth: ^4.15.3
   
-  # Cloud Firestore - Banco de dados
   cloud_firestore: ^4.13.6
   
-  # Google Sign In - Login com Google
   google_sign_in: ^6.1.6
   
-  # Provider - Gerenciamento de estado
   provider: ^6.1.1
   
-  # Shared Preferences - Armazenamento local
   shared_preferences: ^2.2.2
   
-  # Camera - Acesso à câmera
   camera: ^0.10.5+5
   
-  # Image Picker - Seleção de imagens
   image_picker: ^1.0.5
   
-  # Google ML Kit - Reconhecimento de imagem
   google_mlkit_image_labeling: ^0.10.0
   
-  # Text to Speech - Conversão de texto para fala
   flutter_tts: ^3.8.5
   
-  # Ícones do Cupertino
   cupertino_icons: ^1.0.6
 
 dev_dependencies:
@@ -50,13 +39,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  # Descomente se quiser adicionar assets
-  # assets:
-  #   - assets/
-  
-  # Fontes personalizadas (se necessário)
-  # fonts:
-  #   - family: ComicSans
-  #     fonts:
-  #       - asset: fonts/ComicSans.ttf

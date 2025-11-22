@@ -426,7 +426,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     children: [
                       _buildFeatureIcon('✏️', 'Cadastrar'),
                       _buildFeatureIcon('📚', 'Histórico'),
-                      _buildFeatureIcon('🎯', 'Traduzir'),
+                      _buildFeatureIcon('📷', 'Traduzir'),
                       _buildFeatureIcon('⚙️', 'Config'),
                     ],
                   ),
@@ -640,7 +640,7 @@ class _MenuScreenState extends State<MenuScreen>
                       _buildAnimatedButton(
                         context: context,
                         icon: Icons.language,
-                        emoji: '🎯',
+                        emoji: '📷',
                         label: 'Câmera Tradução',
                         description: 'Traduza com inteligência!',
                         colors: [const Color(0xFFFFD89B), const Color(0xFF19547B)],

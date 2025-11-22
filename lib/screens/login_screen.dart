@@ -80,43 +80,34 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
     
     try {
-      // Limpar sessões anteriores
       await _googleSignIn.signOut();
       await _auth.signOut();
       
-      // Iniciar o login do Google
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
       if (googleUser == null) {
-        // Usuário cancelou o login
         if (mounted) {
           setState(() => _isLoading = false);
         }
         return;
       }
 
-      // Obter os detalhes de autenticação
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      // Verificar se os tokens foram recebidos
       if (googleAuth.accessToken == null && googleAuth.idToken == null) {
         throw Exception('Falha ao obter tokens de autenticação');
       }
       
-      // Criar a credencial
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Fazer login no Firebase com a credencial
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
       
-      // Verificar se o login foi bem-sucedido
       if (userCredential.user != null) {
         if (mounted) {
           _showSuccessSnackBar('Login realizado com sucesso! 🎉');
-          // Dar um pequeno delay antes de navegar para garantir que o estado está atualizado
           await Future.delayed(const Duration(milliseconds: 500));
           if (mounted) {
             Navigator.pushReplacementNamed(context, '/welcome');
