@@ -361,7 +361,7 @@ class _LoginScreenState extends State<LoginScreen>
                     child: FadeTransition(
                       opacity: _formFade,
                       child: Text(
-                        _isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta! 🎉',
+                        _isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta!',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.white70,

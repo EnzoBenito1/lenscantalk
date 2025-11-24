@@ -879,7 +879,7 @@ class _MLKitScreenState extends State<MLKitScreen> with TickerProviderStateMixin
                       )
                     : const Icon(Icons.check_circle, size: 20),
                 label: Text(
-                  _isSaving ? "Salvando..." : "✓ Entendi",
+                  _isSaving ? "Salvando..." : "Entendi",
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(

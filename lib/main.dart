@@ -318,7 +318,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: FadeTransition(
                     opacity: _textFade,
                     child: Text(
-                      'Olá, $userName! 👋',
+                      'Olá, $userName!',
                       style: const TextStyle(
                         fontSize: 20,
                         color: Colors.white,
@@ -336,7 +336,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: FadeTransition(
                     opacity: _textFade,
                     child: const Text(
-                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚🎯⚙️',
+                      'Bem vindo a tela inicial, toque em "começar" para aprender! ✏️📚📷⚙️',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.white,
